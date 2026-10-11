@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Defuse control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --case: #3b4228;
+    --case-dark: #2c3120;
+    --panel: #4a5233;
+    --khaki: #e8e2c8;
+    --khaki-dim: #b9b393;
+    --hazard: #f2b705;
+    --glass: #161811;
+    --led: #ff4a3d;
+    --led-dim: #4a1a16;
+    --ok: #7fd36b;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html, body { margin: 0; }
+  body {
+    background: var(--case-dark);
+    color: var(--khaki);
+    font: 16px/1.45 "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  main {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 16px 16px 32px;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  h1 { font-size: 1.35rem; font-weight: 700; margin: 0; letter-spacing: .02em; }
+  .link {
+    display: flex; align-items: center; gap: 8px;
+    font-size: .9rem; color: var(--khaki-dim);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: #6b6f5a; }
+  .dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+
+  /* ---------- the case ---------- */
+  .case {
+    background: var(--case);
+    border-radius: 14px;
+    padding: 14px;
+    border: 2px solid #565f3c;
+    box-shadow: inset 0 0 0 4px var(--case-dark);
+    position: relative;
+  }
+  .case::before {
+    content: "";
+    position: absolute; left: 14px; right: 14px; top: 0; height: 8px;
+    background: repeating-linear-gradient(-45deg, var(--hazard) 0 10px, #1e2015 10px 20px);
+    border-radius: 0 0 4px 4px;
+  }
+
+  /* ---------- the display (the memorable bit) ---------- */
+  .display {
+    margin-top: 12px;
+    background: var(--glass);
+    border-radius: 8px;
+    padding: 14px 16px 12px;
+    border: 3px solid #0d0e09;
+    box-shadow: inset 0 2px 14px rgba(0,0,0,.8);
+  }
+  .display-top {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: "Share Tech Mono", ui-monospace, monospace;
+    color: var(--led); font-size: .95rem;
+  }
+  .clock {
+    font-family: "Share Tech Mono", ui-monospace, monospace;
+    font-size: clamp(3.6rem, 21vw, 5.6rem);
+    line-height: 1;
+    text-align: center;
+    color: var(--led);
+    text-shadow: 0 0 14px rgba(255,74,61,.55);
+    margin: 10px 0 8px;
+    position: relative;
+  }
+  .clock .ghost {
+    position: absolute; inset: 0; color: var(--led-dim); text-shadow: none; z-index: 0;
+  }
+  .clock .live { position: relative; z-index: 1; }
+  .clock.idle .live { color: var(--led-dim); text-shadow: none; }
+  .clock.blink .live { animation: blink 1s steps(2, start) infinite; }
+  @keyframes blink { to { visibility: hidden; } }
+  .pips { display: flex; gap: 6px; justify-content: center; min-height: 12px; }
+  .pip { width: 22px; height: 8px; border-radius: 2px; background: var(--led-dim); }
+  .pip.used { background: var(--led); box-shadow: 0 0 6px var(--led); }
+  .result {
+    margin-top: 10px; text-align: center; font-weight: 700; min-height: 1.4em;
+    color: var(--hazard);
+  }
+
+  /* ---------- controls ---------- */
+  .panel {
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 14px;
+    margin-top: 14px;
+  }
+  .panel h2 { margin: 0 0 10px; font-size: 1.05rem; font-weight: 700; }
+  .segmented { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--case-dark); padding: 4px; border-radius: 8px; }
+  .segmented button {
+    font: inherit; font-size: .95rem; border: 0; border-radius: 6px; padding: 8px 4px;
+    background: transparent; color: var(--khaki-dim); cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { background: var(--hazard); color: #1e2015; font-weight: 700; }
+  .row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; margin-top: 14px; }
+  .row label { font-weight: 500; }
+  .row output { font-family: "Share Tech Mono", ui-monospace, monospace; color: var(--hazard); font-size: 1.05rem; }
+  input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--hazard); }
+  .toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; cursor: pointer; }
+  .toggle small { display: block; color: var(--khaki-dim); font-size: .85rem; }
+  .toggle input { width: 22px; height: 22px; accent-color: var(--hazard); flex: none; }
+
+  /* ---------- buttons ---------- */
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .btn {
+    font: inherit; font-weight: 700; font-size: 1rem;
+    border-radius: 8px; padding: 13px 10px; cursor: pointer;
+    border: 2px solid var(--khaki); background: transparent; color: var(--khaki);
+  }
+  .btn.primary { grid-column: 1 / -1; background: var(--hazard); color: #1e2015; border-color: var(--hazard); }
+  .btn.arm { background: var(--led); border-color: var(--led); color: #1e0806; }
+  .btn:disabled { opacity: .35; cursor: not-allowed; }
+  .btn:focus-visible, .segmented button:focus-visible, input:focus-visible { outline: 3px solid var(--hazard); outline-offset: 2px; }
+
+  .notice {
+    background: var(--hazard); color: #1e2015; border-radius: 8px;
+    padding: 12px 14px; margin-bottom: 14px; font-weight: 500;
+  }
+  .toast {
+    position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%); background: var(--khaki); color: #1e2015;
+    padding: 10px 16px; border-radius: 8px; font-weight: 500; max-width: 90vw;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .toast.show { opacity: 1; }
+  details { margin-top: 16px; color: var(--khaki-dim); }
+  summary { cursor: pointer; }
+  pre {
+    background: var(--glass); color: var(--khaki-dim); border-radius: 6px; padding: 10px;
+    font-size: .8rem; max-height: 200px; overflow: auto; white-space: pre-wrap;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .clock.blink .live { animation: none; }
+    .toast { transition: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div id="unsupported" class="notice" hidden>
+    This browser can't use Bluetooth. Open this page in Chrome or Edge on Windows, Mac or Android, or in the Bluefy browser on iPhone.
+  </div>
+
+  <header>
+    <h1>Defuse control</h1>
+    <div class="link"><span id="dot" class="dot"></span><span id="linkText">Not connected</span></div>
+  </header>
+
+  <div class="case">
+    <div class="display" aria-live="polite">
+      <div class="display-top"><span id="stateText">Offline</span><span id="warnText"></span></div>
+      <div id="clock" class="clock idle"><span class="ghost" aria-hidden="true">88:88</span><span id="clockLive" class="live">--:--</span></div>
+      <div id="pips" class="pips"></div>
+      <div id="result" class="result"></div>
+    </div>
+
+    <div class="actions">
+      <button id="connectBtn" class="btn primary">Connect to micro:bit</button>
+      <button id="armBtn" class="btn arm" disabled>Arm bomb</button>
+      <button id="resetBtn" class="btn" disabled>Reset</button>
+    </div>
+  </div>
+
+  <section class="panel" aria-labelledby="settingsHead">
+    <h2 id="settingsHead">Game settings</h2>
+    <div class="segmented" role="group" aria-label="Difficulty">
+      <button data-preset="easy" aria-pressed="false">Easy</button>
+      <button data-preset="medium" aria-pressed="true">Medium</button>
+      <button data-preset="hard" aria-pressed="false">Hard</button>
+      <button data-preset="custom" aria-pressed="false">Custom</button>
+    </div>
+
+    <div class="row">
+      <label for="timer">Timer</label><output id="timerOut"></output>
+      <input id="timer" type="range" min="1" max="30" step="1">
+    </div>
+    <div class="row">
+      <label for="warnings">Warnings allowed</label><output id="warningsOut"></output>
+      <input id="warnings" type="range" min="1" max="9" step="1">
+    </div>
+    <div class="row">
+      <label for="noise">Noise sensitivity</label><output id="noiseOut"></output>
+      <input id="noise" type="range" min="0" max="4" step="1">
+    </div>
+
+    <label class="toggle"><span>Random safe wire<small>Players don't know which wire disarms it</small></span><input id="random" type="checkbox"></label>
+    <label class="toggle"><span>Shake penalty<small>Bumping the bomb costs a warning</small></span><input id="shake" type="checkbox"></label>
+    <label class="toggle"><span>Ticking in the last 30 seconds</span><input id="tick" type="checkbox"></label>
+
+    <div class="actions">
+      <button id="sendBtn" class="btn primary" disabled>Send settings to bomb</button>
+    </div>
+  </section>
+
+  <details>
+    <summary>Connection log</summary>
+    <pre id="log"></pre>
+  </details>
+</main>
+
+<div id="toast" class="toast" role="status"></div>
+
+<script>
+(() => {
+  const UART_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+  // Noise sensitivity steps -> micro:bit sound threshold (lower = more sensitive)
+  const NOISE_LEVELS = [
+    { label: "Very low", value: 200 },
+    { label: "Low", value: 160 },
+    { label: "Medium", value: 128 },
+    { label: "High", value: 100 },
+    { label: "Very high", value: 75 }
+  ];
+  const PRESETS = {
+    easy:   { timer: 10, warnings: 7, noise: 1, random: false, shake: false, tick: false },
+    medium: { timer: 5,  warnings: 5, noise: 2, random: true,  shake: true,  tick: true },
+    hard:   { timer: 3,  warnings: 3, noise: 3, random: true,  shake: true,  tick: true }
+  };
+  const STATE_LABELS = {
+    IDLE: "Ready", ARMED: "Armed", FINAL: "Final countdown",
+    DISARMED: "Disarmed", BOOM: "Detonated"
+  };
+
+  const $ = id => document.getElementById(id);
+  const el = {
+    timer: $("timer"), warnings: $("warnings"), noise: $("noise"),
+    random: $("random"), shake: $("shake"), tick: $("tick"),
+    timerOut: $("timerOut"), warningsOut: $("warningsOut"), noiseOut: $("noiseOut"),
+    connectBtn: $("connectBtn"), armBtn: $("armBtn"), resetBtn: $("resetBtn"), sendBtn: $("sendBtn"),
+    dot: $("dot"), linkText: $("linkText"), stateText: $("stateText"), warnText: $("warnText"),
+    clock: $("clock"), clockLive: $("clockLive"), pips: $("pips"), result: $("result"),
+    log: $("log"), toast: $("toast")
+  };
+
+  let device = null, writeChar = null, notifyChar = null;
+  let writeQueue = Promise.resolve();
+  let rxBuffer = "";
+  let state = null;
+  let maxWarnings = 5;
+
+  // ---------- helpers ----------
+  function log(msg) {
+    const t = new Date().toLocaleTimeString();
+    el.log.textContent = `${t}  ${msg}\n` + el.log.textContent.slice(0, 4000);
+  }
+  let toastTimer;
+  function toast(msg) {
+    el.toast.textContent = msg;
+    el.toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.toast.classList.remove("show"), 2600);
+  }
+  function fmt(sec) {
+    sec = Math.max(0, sec);
+    return String(Math.floor(sec / 60)).padStart(2, "0") + ":" + String(sec % 60).padStart(2, "0");
+  }
+
+  // ---------- settings UI ----------
+  function renderOutputs() {
+    el.timerOut.textContent = el.timer.value + " min";
+    el.warningsOut.textContent = el.warnings.value;
+    el.noiseOut.textContent = NOISE_LEVELS[el.noise.value].label;
+  }
+  function currentSettings() {
+    return {
+      timer: +el.timer.value, warnings: +el.warnings.value, noise: +el.noise.value,
+      random: el.random.checked, shake: el.shake.checked, tick: el.tick.checked
+    };
+  }
+  function applySettings(s) {
+    el.timer.value = s.timer; el.warnings.value = s.warnings; el.noise.value = s.noise;
+    el.random.checked = s.random; el.shake.checked = s.shake; el.tick.checked = s.tick;
+    renderOutputs();
+    markPreset();
+  }
+  function markPreset() {
+    const cur = currentSettings();
+    let match = "custom";
+    for (const [name, p] of Object.entries(PRESETS)) {
+      if (Object.keys(p).every(k => p[k] === cur[k])) { match = name; break; }
+    }
+    document.querySelectorAll("[data-preset]").forEach(b =>
+      b.setAttribute("aria-pressed", String(b.dataset.preset === match)));
+  }
+  document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => {
+    if (b.dataset.preset === "custom") {
+      document.querySelectorAll("[data-preset]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    } else {
+      applySettings(PRESETS[b.dataset.preset]);
+    }
+  }));
+  [el.timer, el.warnings, el.noise].forEach(i => i.addEventListener("input", () => { renderOutputs(); markPreset(); }));
+  [el.random, el.shake, el.tick].forEach(i => i.addEventListener("change", markPreset));
+
+  // ---------- display ----------
+  function renderPips(used) {
+    el.pips.innerHTML = "";
+    for (let i = 0; i < maxWarnings; i++) {
+      const p = document.createElement("span");
+      p.className = "pip" + (i < used ? " used" : "");
+      el.pips.appendChild(p);
+    }
+  }
+  function setState(s) {
+    state = s;
+    el.stateText.textContent = STATE_LABELS[s] || s;
+    const running = s === "ARMED" || s === "FINAL";
+    el.clock.classList.toggle("idle", !running && s !== "BOOM");
+    el.clock.classList.toggle("blink", s === "FINAL" || s === "BOOM");
+    if (s === "IDLE") {
+      el.clockLive.textContent = fmt(+el.timer.value * 60);
+      el.warnText.textContent = "";
+    }
+    if (s === "ARMED") el.result.textContent = "";
+    if (s === "DISARMED") el.result.textContent = "Bomb disarmed. Nice work.";
+    if (s === "BOOM") { el.result.textContent = "Boom. Press reset or button B to go again."; el.clockLive.textContent = "00:00"; }
+    updateButtons();
+  }
+  function updateButtons() {
+    const on = !!writeChar;
+    el.connectBtn.textContent = on ? "Disconnect" : "Connect to micro:bit";
+    el.armBtn.disabled = !on || state !== "IDLE";
+    el.resetBtn.disabled = !on || state === "IDLE" || state === null;
+    el.sendBtn.disabled = !on || state !== "IDLE";
+    [el.timer, el.warnings, el.noise, el.random, el.shake, el.tick].forEach(i =>
+      i.disabled = on && state !== "IDLE" && state !== null);
+  }
+
+  // ---------- Bluetooth ----------
+  async function connect() {
+    try {
+      device = await navigator.bluetooth.requestDevice({
+        filters: [{ namePrefix: "BBC micro:bit" }],
+        optionalServices: [UART_SERVICE]
+      });
+      device.addEventListener("gattserverdisconnected", onDisconnected);
+      el.linkText.textContent = "Connecting…";
+      const server = await device.gatt.connect();
+      const service = await server.getPrimaryService(UART_SERVICE);
+      // The micro:bit swaps TX/RX compared to other UART devices,
+      // so pick characteristics by what they can do rather than by UUID.
+      for (const c of await service.getCharacteristics()) {
+        if (c.properties.write || c.properties.writeWithoutResponse) writeChar = c;
+        if (c.properties.notify || c.properties.indicate) notifyChar = c;
+      }
+      if (!writeChar || !notifyChar) throw new Error("UART service found but its characteristics are missing");
+      await notifyChar.startNotifications();
+      notifyChar.addEventListener("characteristicvaluechanged", onData);
+      el.dot.classList.add("on");
+      el.linkText.textContent = device.name.replace("BBC micro:bit", "micro:bit").trim();
+      log("Connected to " + device.name);
+      updateButtons();
+      send("?");
+    } catch (err) {
+      if (err.name !== "NotFoundError") {
+        log("Connection failed: " + err.message);
+        toast("Couldn't connect. Check the bomb is switched on and the Bluetooth code is flashed.");
+      }
+      resetLink();
+    }
+  }
+  function resetLink() {
+    writeChar = null; notifyChar = null;
+    el.dot.classList.remove("on");
+    el.linkText.textContent = "Not connected";
+    el.stateText.textContent = "Offline";
+    state = null;
+    updateButtons();
+  }
+  function onDisconnected() {
+    log("Disconnected");
+    toast("Bomb disconnected");
+    resetLink();
+  }
+  function send(line) {
+    if (!writeChar) return Promise.resolve();
+    const data = new TextEncoder().encode(line + "\n");
+    writeQueue = writeQueue
+      .then(() => writeChar.writeValue(data))
+      .then(() => log("→ " + line))
+      .catch(e => log("Send failed (" + line + "): " + e.message));
+    return writeQueue;
+  }
+  function onData(e) {
+    rxBuffer += new TextDecoder().decode(e.target.value);
+    const lines = rxBuffer.split(/\r?\n/);
+    rxBuffer = lines.pop();
+    lines.filter(Boolean).forEach(handleLine);
+  }
+
+  function handleLine(line) {
+    log("← " + line);
+    const i = line.indexOf(":");
+    const key = i === -1 ? line : line.slice(0, i);
+    const val = i === -1 ? "" : line.slice(i + 1);
+    switch (key) {
+      case "C": {
+        const [t, w, n, s, r, k] = val.split(",").map(Number);
+        let noiseIdx = 0, best = Infinity;
+        NOISE_LEVELS.forEach((lvl, idx) => {
+          const d = Math.abs(lvl.value - n);
+          if (d < best) { best = d; noiseIdx = idx; }
+        });
+        applySettings({ timer: t, warnings: w, noise: noiseIdx, shake: s === 1, random: r === 1, tick: k === 1 });
+        maxWarnings = w;
+        if (state === "IDLE") { el.clockLive.textContent = fmt(t * 60); renderPips(0); }
+        break;
+      }
+      case "ST": setState(val); break;
+      case "TL": el.clockLive.textContent = fmt(parseInt(val, 10)); break;
+      case "WN": {
+        const [used, max] = val.split(",").map(Number);
+        maxWarnings = max;
+        renderPips(used);
+        el.warnText.textContent = used ? `${max - used} left` : "";
+        break;
+      }
+      case "EV":
+        ({
+          NOWIRE: () => toast("Connect both wires before arming"),
+          BUSY: () => toast("Settings are locked while the bomb is armed"),
+          WRONG: () => { el.result.textContent = "Wrong wire cut!"; },
+          OVERLOAD: () => { el.result.textContent = "Too much noise! Last chance…"; },
+          TIMEUP: () => { el.result.textContent = "Time's nearly up!"; },
+          RESET: () => { el.result.textContent = "Round reset"; }
+        }[val] || (() => {}))();
+        break;
+    }
+  }
+
+  // ---------- buttons ----------
+  el.connectBtn.addEventListener("click", () => {
+    if (writeChar && device && device.gatt.connected) device.gatt.disconnect();
+    else connect();
+  });
+  el.sendBtn.addEventListener("click", async () => {
+    const s = currentSettings();
+    await send("T:" + s.timer);
+    await send("W:" + s.warnings);
+    await send("N:" + NOISE_LEVELS[s.noise].value);
+    await send("S:" + (s.shake ? 1 : 0));
+    await send("R:" + (s.random ? 1 : 0));
+    await send("K:" + (s.tick ? 1 : 0));
+    await send("?");
+    toast("Settings sent");
+  });
+  el.armBtn.addEventListener("click", () => send("GO"));
+  el.resetBtn.addEventListener("click", () => send("X"));
+
+  // ---------- start ----------
+  if (!navigator.bluetooth) {
+    $("unsupported").hidden = false;
+    el.connectBtn.disabled = true;
+  }
+  applySettings(PRESETS.medium);
+  renderPips(0);
+  updateButtons();
+})();
+</script>
+</body>
+</html>
